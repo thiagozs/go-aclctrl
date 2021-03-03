@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+    databse:
+      image: mysql:latest
+      restart: always
+      environment:
+        MYSQL_DATABASE: openbank
+        MYSQL_USER: root
+        MYSQL_PASSWORD: secret
+        MYSQL_ROOT_PASSWORD: secret
+      ports:
+        - 3306:3306
