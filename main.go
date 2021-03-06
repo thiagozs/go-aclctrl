@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/edufschmidt/go-acl"
+	"github.com/thiagozs/go-acl"
 )
 
 func main() {
@@ -29,18 +29,18 @@ func main() {
 	}
 
 	strp1 := fmt.Sprintf("firstbanks-%s", utils.RandStringRunes(5))
-	policy1 := db.CreatePolicy(strp1, []model.Rule{model.Rule{
+	policy1 := db.CreatePolicy(strp1, []model.Rule{{
 		Capabilities: []string{"read"},
 		Path:         "*",
 		Resource:     fmt.Sprintf("goldbank-%s", utils.RandStringRunes(5)),
-	}, model.Rule{
+	}, {
 		Capabilities: []string{"write"},
 		Path:         "*",
 		Resource:     fmt.Sprintf("silverbank-%s", utils.RandStringRunes(5)),
 	}})
 
 	strp2 := fmt.Sprintf("lastbank-%s", utils.RandStringRunes(5))
-	policy2 := db.CreatePolicy(strp2, []model.Rule{model.Rule{
+	policy2 := db.CreatePolicy(strp2, []model.Rule{{
 		Capabilities: []string{"read", "write", "list"},
 		Path:         "*",
 		Resource:     fmt.Sprintf("copperbank-%s", utils.RandStringRunes(5)),

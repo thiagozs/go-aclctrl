@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 
-	"github.com/edufschmidt/go-acl"
+	"github.com/thiagozs/go-acl"
 )
 
 type storage struct {
@@ -70,11 +70,11 @@ type Tokens struct {
 	policies   []string
 }
 
-func (t *Tokens) Policies() []string {
+func (t *Tokens) PermPolicies() []string {
 	return t.policies
 }
 
-func (t *Tokens) IsPrivileged() bool {
+func (t *Tokens) PermIsPrivileged() bool {
 	return t.privileged
 }
 
@@ -83,11 +83,11 @@ type Policies struct {
 	rules []*Rules
 }
 
-func (p *Policies) Name() string {
+func (p *Policies) PermName() string {
 	return p.name
 }
 
-func (p *Policies) Rules() []acl.Rule {
+func (p *Policies) PermRules() []acl.Rule {
 	rules := []acl.Rule{}
 	for _, r := range p.rules {
 		rules = append(rules, r)
@@ -101,14 +101,14 @@ type Rules struct {
 	capabilities []string
 }
 
-func (r *Rules) Resource() string {
+func (r *Rules) GetResource() string {
 	return r.resource
 }
 
-func (r *Rules) Path() string {
+func (r *Rules) GetPath() string {
 	return r.path
 }
 
-func (r *Rules) Capabilities() []string {
+func (r *Rules) GetCapabilities() []string {
 	return r.capabilities
 }

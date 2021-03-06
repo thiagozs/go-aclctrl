@@ -4,7 +4,7 @@ import (
 	"acl-test-go/storage"
 	"context"
 
-	"github.com/edufschmidt/go-acl"
+	"github.com/thiagozs/go-acl"
 )
 
 const (
