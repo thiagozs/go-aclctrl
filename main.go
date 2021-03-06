@@ -28,40 +28,45 @@ func main() {
 		log.Fatal(err)
 	}
 
-	strg := fmt.Sprintf("goldbank-%s", utils.RandStringRunes(5))
-	goldBankRules := db.CreateRule(strg, "*", []string{"read"})
-
-	strs := fmt.Sprintf("silverbank-%s", utils.RandStringRunes(5))
-	silverBankRules := db.CreateRule(strs, "*", []string{"write"})
-
-	strc := fmt.Sprintf("copperbank-%s", utils.RandStringRunes(5))
-	copperBankRules := db.CreateRule(strc, "*", []string{"read", "write", "list"})
-
 	strp1 := fmt.Sprintf("firstbanks-%s", utils.RandStringRunes(5))
-	policy1 := db.CreatePolicy(strp1, []model.Rule{goldBankRules, silverBankRules})
+	policy1 := db.CreatePolicy(strp1, []model.Rule{model.Rule{
+		Capabilities: []string{"read"},
+		Path:         "*",
+		Resource:     fmt.Sprintf("goldbank-%s", utils.RandStringRunes(5)),
+	}, model.Rule{
+		Capabilities: []string{"write"},
+		Path:         "*",
+		Resource:     fmt.Sprintf("silverbank-%s", utils.RandStringRunes(5)),
+	}})
+
 	strp2 := fmt.Sprintf("lastbank-%s", utils.RandStringRunes(5))
-	policy2 := db.CreatePolicy(strp2, []model.Rule{copperBankRules})
+	policy2 := db.CreatePolicy(strp2, []model.Rule{model.Rule{
+		Capabilities: []string{"read", "write", "list"},
+		Path:         "*",
+		Resource:     fmt.Sprintf("copperbank-%s", utils.RandStringRunes(5)),
+	}})
 
-	token := db.CreateToken(false, 1, []string{policy1.Name, policy2.Name})
-	fmt.Println(token)
-
-	tokenResponse, policiesResponse, err := db.GetPermissonsByToken(token)
+	token, err := db.CreateSecret(false, 1, []string{policy1.Name, policy2.Name})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("UserToken    -> %+v\n", tokenResponse.Secret)
-	fmt.Printf("UserPolicies -> %+v\n", policiesResponse)
+	fmt.Println(token)
+
+	perm, policies, err := db.GetPermissonsBySecret(token)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("UserSecret----> %+v\n", perm.Secret)
+	fmt.Printf("UserPolicies--> %+v\n", policies)
 
 	config := config.New()
 	resolver, err := acl.NewResolver(config)
 	if err != nil {
 		panic(err)
 	}
-
-	secret := "54c06ace-7da6-443b-a5a2-05da5294fbd5"
 	ctx := context.Background()
 
-	acl, err := resolver.ResolveSecret(ctx, secret)
+	acl, err := resolver.ResolveSecret(ctx, perm.Secret)
 	if err != nil {
 		panic(err)
 	}
