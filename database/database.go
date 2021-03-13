@@ -10,22 +10,22 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type DatabaseRepo interface {
+type Repo interface {
 	LogMode(logger logger.LogLevel)
 	CreateTable(models interface{}) error
 	CreateTables(models []interface{}) error
 	CreateRule(resource, path string, capabilities []string) model.Rule
-	CreatePolicy(name string, rules []model.Rule) model.Policie
+	CreatePolicy(name string, userId uint, rules []model.Rule) model.Policie
 	CreateSecret(privileged bool, userId uint, policies []string) (string, error)
-	GetPermissonsBySecret(secret string) (model.Token, []model.Policie, error)
+	GetPermissonsBySecret(secret string) ([]model.Token, []model.Policie, error)
 }
 
-type databaseRepo struct {
+type repo struct {
 	db     *gorm.DB
 	models []interface{}
 }
 
-func NewConnection() (DatabaseRepo, error) {
+func NewConnection() (Repo, error) {
 	//db, err := gorm.Open(sqlite.Open("./database.db"), &gorm.Config{
 	//Logger: logger.Default.LogMode(logger.Info),
 	//DisableForeignKeyConstraintWhenMigrating: true,
@@ -50,25 +50,25 @@ func NewConnection() (DatabaseRepo, error) {
 	sqldb.SetMaxOpenConns(100)
 	sqldb.SetConnMaxLifetime(time.Second * 30)
 
-	return &databaseRepo{
+	return &repo{
 		db:     db,
 		models: []interface{}{},
 	}, nil
 }
 
-func (d *databaseRepo) LogMode(logger logger.LogLevel) {
+func (d *repo) LogMode(logger logger.LogLevel) {
 	d.db.Logger.LogMode(logger)
 }
 
-func (d *databaseRepo) CreateTable(model interface{}) error {
+func (d *repo) CreateTable(model interface{}) error {
 	return d.db.Migrator().AutoMigrate(&model)
 }
 
-func (d *databaseRepo) CreateTables(models []interface{}) error {
+func (d *repo) CreateTables(models []interface{}) error {
 	return d.db.Migrator().AutoMigrate(models...)
 }
 
-func (d *databaseRepo) CreateRule(resource, path string, capabilities []string) model.Rule {
+func (d *repo) CreateRule(resource, path string, capabilities []string) model.Rule {
 	rule := model.Rule{
 		Resource:     resource,
 		Path:         path,
@@ -80,8 +80,10 @@ func (d *databaseRepo) CreateRule(resource, path string, capabilities []string) 
 	return rule
 }
 
-func (d *databaseRepo) CreatePolicy(name string, rules []model.Rule) model.Policie {
+func (d *repo) CreatePolicy(name string, userId uint, rules []model.Rule) model.Policie {
+
 	policy := model.Policie{
+		TokenID:   userId,
 		Name:      name,
 		Rules:     rules,
 		CreatedAt: time.Now(),
@@ -91,7 +93,7 @@ func (d *databaseRepo) CreatePolicy(name string, rules []model.Rule) model.Polic
 	return policy
 }
 
-func (d *databaseRepo) CreateSecret(privileged bool, userId uint, policies []string) (string, error) {
+func (d *repo) CreateSecret(privileged bool, userId uint, policies []string) (string, error) {
 
 	id := uuid.New()
 
@@ -110,22 +112,30 @@ func (d *databaseRepo) CreateSecret(privileged bool, userId uint, policies []str
 	return id.String(), nil
 }
 
-func (d *databaseRepo) GetPermissonsBySecret(token string) (model.Token, []model.Policie, error) {
-	tokenr := model.Token{}
-	policiesr := []model.Policie{}
+func (d *repo) GetPermissonsBySecret(token string) ([]model.Token, []model.Policie, error) {
+	secrets := []model.Token{}
+	policies := []model.Policie{}
 
 	// find token by hash
-	d.db.Model(model.Token{}).Where("secret = ?", token).Find(&tokenr)
-
-	// get policies by user
-	tx := d.db.Model(model.Policie{}).
-		Where("acl_policies.name IN ?", tokenr.Policies.ToStringArr()).
-		Joins("JOIN acl_rules ON acl_rules.police_id = acl_policies.id").
-		Preload("Rules").
-		Find(&policiesr)
-	if tx.Error != nil {
-		return model.Token{}, []model.Policie{}, tx.Error
+	if tx := d.db.Model(model.Token{}).Where("secret IN ?", []string{token}).Find(&secrets); tx.Error != nil {
+		return secrets, policies, tx.Error
 	}
 
-	return tokenr, policiesr, nil
+	// get policies and rules by user
+	if tx := d.db.Model(model.Policie{}).
+		Where("name IN ?", secrets[0].Policies.ToStringArr()).
+		Find(&policies); tx.Error != nil {
+		return secrets, policies, tx.Error
+	}
+
+	// get rules by policies id
+	for idx, v := range policies {
+		rules := []model.Rule{}
+		if tx := d.db.Model(model.Rule{}).Where("police_id = ?", v.ID).Find(&rules); tx.Error != nil {
+			return secrets, policies, tx.Error
+		}
+		policies[idx].Rules = rules
+	}
+
+	return secrets, policies, nil
 }

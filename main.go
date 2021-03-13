@@ -8,8 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-
-	"github.com/thiagozs/go-acl"
 )
 
 func main() {
@@ -28,55 +26,42 @@ func main() {
 		log.Fatal(err)
 	}
 
-	strp1 := fmt.Sprintf("firstbanks-%s", utils.RandStringRunes(5))
-	policy1 := db.CreatePolicy(strp1, []model.Rule{{
+	strp1 := fmt.Sprintf("firstbanks%s", utils.RandStringRunes(5))
+	policy1 := db.CreatePolicy(strp1, 1, []model.Rule{{
 		Capabilities: []string{"read"},
 		Path:         "*",
-		Resource:     fmt.Sprintf("goldbank-%s", utils.RandStringRunes(5)),
+		Resource:     "goldbank",
 	}, {
 		Capabilities: []string{"write"},
 		Path:         "*",
-		Resource:     fmt.Sprintf("silverbank-%s", utils.RandStringRunes(5)),
+		Resource:     "silverbank",
 	}})
 
-	strp2 := fmt.Sprintf("lastbank-%s", utils.RandStringRunes(5))
-	policy2 := db.CreatePolicy(strp2, []model.Rule{{
-		Capabilities: []string{"read", "write", "list"},
+	strp2 := fmt.Sprintf("lastbank%s", utils.RandStringRunes(5))
+	policy2 := db.CreatePolicy(strp2, 1, []model.Rule{{
+		Resource:     "copperbank",
 		Path:         "*",
-		Resource:     fmt.Sprintf("copperbank-%s", utils.RandStringRunes(5)),
+		Capabilities: []string{"read", "write", "list"},
 	}})
 
-	token, err := db.CreateSecret(false, 1, []string{policy1.Name, policy2.Name})
+	secret, err := db.CreateSecret(false, 1, []string{policy1.Name, policy2.Name})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(token)
+	fmt.Println(secret)
 
-	perm, policies, err := db.GetPermissonsBySecret(token)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("UserSecret----> %+v\n", perm.Secret)
-	fmt.Printf("UserPolicies--> %+v\n", policies)
-
-	config := config.New()
-	resolver, err := acl.NewResolver(config)
-	if err != nil {
-		panic(err)
-	}
 	ctx := context.Background()
 
-	acl, err := resolver.ResolveSecret(ctx, perm.Secret)
+	acl, err := config.New(ctx, db, secret)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	fmt.Printf("ACL ResolveSecret:\n------------------\n%s\n", acl.String())
 
-	if err := acl.CheckAuthorized(ctx, "silverbank", "*", "write"); err != nil {
+	if err := acl.CheckAuthorized(ctx, "goldbank", "*", "list"); err != nil {
 		fmt.Println("Not Authorized")
 		return
 	}
-	if err := acl.CheckAuthorized(ctx, "copperbank", "*", "update"); err != nil {
+	if err := acl.CheckAuthorized(ctx, "silverbank", "*", "write"); err != nil {
 		fmt.Println("Not Authorized")
 		return
 	}

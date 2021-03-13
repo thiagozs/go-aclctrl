@@ -3,8 +3,6 @@ package gorm_helper
 import (
 	"database/sql/driver"
 	"errors"
-	"fmt"
-	"reflect"
 	"strings"
 
 	"gorm.io/gorm"
@@ -21,15 +19,11 @@ import (
 type StringArr []string
 
 func (s *StringArr) Scan(src interface{}) error {
-	fmt.Println("TypeOf = ", reflect.TypeOf(src))
-	fmt.Println("ValueOf = ", reflect.ValueOf(src))
 	switch value := src.(type) {
 	case string:
-		fmt.Println("SOU STRING")
 		*s = strings.Split(value, "|")
 		return nil
 	case []byte:
-		fmt.Println("SOU []BYTE")
 		*s = strings.Split(string(value), "|")
 		return nil
 	}
@@ -55,6 +49,6 @@ func (s StringArr) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	return ""
 }
 
-func (s StringArr) ToStringArr() []string {
-	return s
+func (s *StringArr) ToStringArr() []string {
+	return *s
 }

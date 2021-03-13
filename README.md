@@ -8,12 +8,40 @@
 * MySQL Database
 * Docker compose and containers
 
-In development, commits are welcome and pull requests.
+Example code `main.go`
+```go
+    // Register on database the user with the policies you need
+	secret, err := db.CreateSecret(false, 1, []string{policy1.Name, policy2.Name})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(secret)
 
+	ctx := context.Background()
+
+    // start config with yours custom settins of rules
+	acl, err := config.New(ctx, db, secret)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+    // validate with check authorized
+	if err := acl.CheckAuthorized(ctx, "goldbank", "*", "list"); err != nil {
+		fmt.Println("Not Authorized")
+		return
+	}
+	if err := acl.CheckAuthorized(ctx, "silverbank", "*", "write"); err != nil {
+		fmt.Println("Not Authorized")
+		return
+	}
+
+    // follow the flow of your rules
+	fmt.Println("Keep the flow")
+```
 ## TODO
 
-* [ ] - Migrate rules from memory to database
-* [ ] - Organize code style
+* [x] - Migrate rules from memory to database
+* [x] - Organize code style
 * [x] - Bind SQL dataset for json call
 * [x] - CRUD policies, rules and token
 * [x] - Repository for database
